@@ -1,7 +1,7 @@
 import React from 'react'
 import bridge from 'bridge'
 import { SharedContext } from '../sharedContext'
-import { InspectorSeekLength } from '../components/Seek'
+import { MediaSeek } from '../components/MediaSeek'
 
 export const InspectorSeek = () => {
   const [state] = React.useContext(SharedContext)
@@ -54,7 +54,7 @@ export const InspectorSeek = () => {
 
   return (
     <div className="View--spread">
-      <InspectorSeekLength
+      <MediaSeek
         inValue={inPercent}
         outValue={outPercent}
         onChange={handleChange}

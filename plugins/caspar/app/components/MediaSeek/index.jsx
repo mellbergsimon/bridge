@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react'
 import './style.css'
 
-export const InspectorSeekLength = ({ inValue, outValue, onChange }) => {
+export const MediaSeek = ({ inValue, outValue, onChange }) => {
   const trackRef = useRef(null)
   const [dragging, setDragging] = useState(null)
   const [inPercent, setInPercent] = useState(inValue)
@@ -32,7 +32,10 @@ export const InspectorSeekLength = ({ inValue, outValue, onChange }) => {
     }
 
     const handlePointerUp = () => {
-      onChange(inPercent, outPercent)
+      // Only update if any of the values have changed
+      if (inPercent !== inValue || outPercent !== outValue) {
+        onChange(inPercent, outPercent)
+      }
       setDragging(null)
     }
 
