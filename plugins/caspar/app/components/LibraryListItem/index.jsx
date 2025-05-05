@@ -7,7 +7,7 @@ import { SharedContext } from '../../sharedContext'
 import * as asset from '../../utils/asset'
 
 import { getFileName } from '../../utils/library'
-import { calculateDurationMs } from '../../utils/duration'
+import { calculateDurationMs, frameRateFractionToDecimal } from '../../utils/duration'
 
 const DEFAULT_VALUES = {
   [asset.type.still]: {
@@ -47,7 +47,9 @@ const ITEM_CONSTRUCTORS = [
             target: item.name,
             ...(DEFAULT_VALUES[item.type] || {})
           },
-          duration: calculateDurationMs(item)
+          duration: calculateDurationMs(item),
+          mediaLength: Number.parseInt(item.duration),
+          framerate: frameRateFractionToDecimal(item.framerate)
         }
       }
     }

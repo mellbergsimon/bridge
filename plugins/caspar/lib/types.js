@@ -136,6 +136,13 @@ function init (htmlPath) {
         type: 'string',
         'ui.group': 'Transition',
         'ui.uri': `${htmlPath}?path=inspector/transition`
+      },
+      'caspar.seek': {
+        name: 'Seek',
+        type: 'string',
+        allowsVariables: false,
+        'ui.group': 'Caspar',
+        'ui.uri': `${htmlPath}?path=inspector/seek`
       }
     }
   })
@@ -259,4 +266,5 @@ function init (htmlPath) {
     }
   })
 }
+
 exports.init = init

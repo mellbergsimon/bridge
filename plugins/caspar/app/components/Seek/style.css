@@ -1,0 +1,42 @@
+.InspectorSeekLength {
+  width: 100%;
+  margin: 5%;
+  user-select: none;
+  font-family: sans-serif;
+}
+
+.InspectorSeekLength-track {
+  position: relative;
+  height: 34px;
+  background-color: var(--base-color--shade2);
+  border-radius: 2px;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--base-color--shade2);
+}
+
+.InspectorSeekLength-highlightedRange {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  opacity: 80%;
+  background-color: var(--base-color--shade);
+}
+
+.InspectorSeekLength-handle {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  border-radius: 1px;
+  background-color: var(--base-color);
+  cursor: ew-resize;
+  transform: translateX(-50%);
+}
+
+.InspectorSeekLength-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--base-color--shade);
+}
