@@ -25,9 +25,9 @@ export const MediaSeek = ({ inValue, outValue, onChange }) => {
       const clamped = Math.max(0, Math.min(100, percent))
 
       if (dragging === 'in') {
-        setInPercent(Math.min(clamped, outValue - 1))
+        setInPercent(Math.min(clamped, outValue - .1))
       } else {
-        setOutPercent(Math.max(clamped, inValue + 1))
+        setOutPercent(Math.max(clamped, inValue + .1))
       }
     }
 
