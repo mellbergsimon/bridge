@@ -1,13 +1,18 @@
 import React from 'react'
 import bridge from 'bridge'
+
 import './style.css'
 
 import { SharedContext } from '../../sharedContext'
 
-import * as asset from '../../utils/asset'
+import * as asset from '../../utils/asset.cjs'
 
+<<<<<<< HEAD
 import { getFileName } from '../../utils/library'
 import { calculateDurationMs, frameRateFractionToDecimal } from '../../utils/duration'
+=======
+const { getFileName } = require('../../utils/library.cjs')
+>>>>>>> foldertreelibrary
 
 const DEFAULT_VALUES = {
   [asset.type.still]: {
@@ -47,9 +52,13 @@ const ITEM_CONSTRUCTORS = [
             target: item.name,
             ...(DEFAULT_VALUES[item.type] || {})
           },
+<<<<<<< HEAD
           duration: calculateDurationMs(item),
           mediaLength: Number.parseInt(item.duration),
           framerate: frameRateFractionToDecimal(item.framerate)
+=======
+          duration: asset.calculateDurationMs(item)
+>>>>>>> foldertreelibrary
         }
       }
     }
@@ -86,7 +95,7 @@ function constructPlayableItemInit (libraryAsset) {
 }
 
 /**
- * @typedef { import('../../utils/asset').LibraryAsset } LibraryAsset
+ * @typedef { import('../../utils/asset.cjs').LibraryAsset } LibraryAsset
  *
  * @param {{
  *  item: LibraryAsset
