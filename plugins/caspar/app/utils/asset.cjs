@@ -114,3 +114,4 @@ function frameRateFractionToDecimal (fraction) {
 
   return dividend / divisor
 }
+exports.frameRateFractionToDecimal = frameRateFractionToDecimal

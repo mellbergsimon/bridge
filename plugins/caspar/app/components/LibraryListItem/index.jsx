@@ -7,13 +7,6 @@ import { SharedContext } from '../../sharedContext'
 
 import * as asset from '../../utils/asset.cjs'
 
-<<<<<<< HEAD
-import { getFileName } from '../../utils/library'
-import { calculateDurationMs, frameRateFractionToDecimal } from '../../utils/duration'
-=======
-const { getFileName } = require('../../utils/library.cjs')
->>>>>>> foldertreelibrary
-
 const DEFAULT_VALUES = {
   [asset.type.still]: {
     channel: 1,
@@ -52,13 +45,9 @@ const ITEM_CONSTRUCTORS = [
             target: item.name,
             ...(DEFAULT_VALUES[item.type] || {})
           },
-<<<<<<< HEAD
-          duration: calculateDurationMs(item),
+          duration: asset.calculateDurationMs(item),
           mediaLength: Number.parseInt(item.duration),
-          framerate: frameRateFractionToDecimal(item.framerate)
-=======
-          duration: asset.calculateDurationMs(item)
->>>>>>> foldertreelibrary
+          framerate: asset.frameRateFractionToDecimal(item.framerate)
         }
       }
     }
