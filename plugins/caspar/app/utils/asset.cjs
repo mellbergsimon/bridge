@@ -114,8 +114,3 @@ function frameRateFractionToDecimal (fraction) {
 
   return dividend / divisor
 }
-<<<<<<< HEAD:plugins/caspar/app/utils/duration.js
-
-export { calculateDurationMs, frameRateFractionToDecimal }
-=======
->>>>>>> foldertreelibrary:plugins/caspar/app/utils/asset.cjs
