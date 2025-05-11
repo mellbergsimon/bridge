@@ -48,7 +48,7 @@ const ITEM_CONSTRUCTORS = [
             ...(DEFAULT_VALUES[item.type] || {})
           },
           duration: asset.calculateDurationMs(item),
-          mediaLength: Number.parseInt(item.duration),
+          medialength: Number.parseInt(item.duration),
           framerate: asset.frameRateFractionToDecimal(item.framerate)
         }
       }

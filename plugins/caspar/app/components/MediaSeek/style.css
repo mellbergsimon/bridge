@@ -1,40 +1,78 @@
-.InspectorSeekLength {
-  width: 98%;
-  margin: 0;
-  margin-left: 1%;
+.MediaRangeSelector {
+  width: 100%;
+  margin: 0 ;
   user-select: none;
   font-family: sans-serif;
+  border-radius: 10px;
 }
 
-.InspectorSeekLength-track {
+.MediaRangeSelector-track {
   position: relative;
   height: 34px;
   background-color: var(--base-color--shade2);
-  border-radius: 2px;
+  border-radius: inherit;
   cursor: pointer;
   box-shadow: inset 0 0 0 1px var(--base-color--shade2);
+  overflow: visible
 }
 
-.InspectorSeekLength-highlightedRange {
+.MediaRangeSelector-highlightedRange {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.MediaRangeSelector-highlightedRange--inside {
   position: absolute;
   top: 0;
-  height: 100%;
-  opacity: 80%;
+  bottom: 0;
   background-color: var(--base-color--shade);
+  opacity: 0.8;
 }
 
-.InspectorSeekLength-handle {
+.MediaRangeSelector-handle {
   position: absolute;
-  top: 0;
-  width: 6px;
-  height: 100%;
-  border-radius: 1px;
+  top: 15%;
+  width: 10px;
+  height: 70%;
   background-color: var(--base-color);
+  border-radius: inherit;
   cursor: ew-resize;
   transform: translateX(-50%);
 }
 
-.InspectorSeekLength-labels {
+.MediaRangeSelector-value {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.MediaRangeSelector-handle::after {
+  content: "";
+  position: absolute;
+  top: 15%;
+  height: 70%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20%;
+  border-radius: inherit;
+  background-color: black;
+}
+
+.MediaRangeSelector-lefthandle {
+  border: 1px solid orange;
+  display: flex;
+}
+
+.MediaRangeSelector-labels {
   display: flex;
   justify-content: space-between;
   margin-top: 4px;

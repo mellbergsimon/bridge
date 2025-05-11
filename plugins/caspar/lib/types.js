@@ -140,9 +140,17 @@ function init (htmlPath) {
       'caspar.seek': {
         name: 'Seek',
         type: 'string',
+        default: '0',
+        allowsVariables: true,
+        'ui.group': 'Timing',
+        'ui.unit': 'ms'
+      },
+      'caspar.range': {
+        name: '',
+        type: 'string',
         allowsVariables: false,
-        'ui.group': 'Caspar',
-        'ui.uri': `${htmlPath}?path=inspector/seek`
+        'ui.group': 'Timing',
+        'ui.uri': `${htmlPath}?path=inspector/range`
       }
     }
   })

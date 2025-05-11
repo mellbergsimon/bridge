@@ -1,19 +1,19 @@
 import React, { useRef, useEffect, useState } from 'react'
 import './style.css'
 
-export const MediaSeek = ({ inValue, outValue, onChange }) => {
+export const MediaSeek = ({ inValue, outValue, maxValue, onChange }) => {
   const trackRef = useRef(null)
   const [dragging, setDragging] = useState(null)
-  const [inPercent, setInPercent] = useState(inValue)
-  const [outPercent, setOutPercent] = useState(outValue)
+  const [inPoint, setInPoint] = useState(inValue)
+  const [outPoint, setOutPoint] = useState(outValue)
 
   const handlePointerDown = (type) => {
     setDragging(type)
   }
 
   useEffect(() => {
-    setInPercent(inValue)
-    setOutPercent(outValue)
+    setInPoint(inValue)
+    setOutPoint(outValue)
   }, [inValue, outValue])
 
   useEffect(() => {
@@ -21,20 +21,21 @@ export const MediaSeek = ({ inValue, outValue, onChange }) => {
       if (!dragging || !trackRef.current) return
 
       const rect = trackRef.current.getBoundingClientRect()
-      const percent = ((e.clientX - rect.left) / rect.width) * 100
-      const clamped = Math.max(0, Math.min(100, percent))
+      const percent = (e.clientX - rect.left) / rect.width
+      const clampedPercent = Math.max(0, Math.min(1, percent))
+      const value = clampedPercent * maxValue
 
       if (dragging === 'in') {
-        setInPercent(Math.min(clamped, outValue - .1))
+        setInPoint(Math.min(value, outPoint))
       } else {
-        setOutPercent(Math.max(clamped, inValue + .1))
+        setOutPoint(Math.max(value, inPoint))
       }
     }
 
     const handlePointerUp = () => {
       // Only update if any of the values have changed
-      if (inPercent !== inValue || outPercent !== outValue) {
-        onChange(inPercent, outPercent)
+      if (inPoint !== inValue || outPoint !== outValue) {
+        onChange(inPoint, outPoint)
       }
       setDragging(null)
     }
@@ -48,33 +49,52 @@ export const MediaSeek = ({ inValue, outValue, onChange }) => {
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp)
     }
-  }, [dragging, inPercent, outPercent, onChange])
+  }, [dragging, inPoint, outPoint])
 
   return (
-    <div className="InspectorSeekLength">
-      <div ref={trackRef} className="InspectorSeekLength-track">
+    <div className="MediaRangeSelector">
+      <div ref={trackRef} className="MediaRangeSelector-track">
+        <div className="MediaRangeSelector-highlightedRange">
+          <div
+            className="MediaRangeSelector-highlightedRange--inside"
+            style={{
+              left: `${(inPoint / maxValue) * 100}%`,
+              width: `${((outPoint - inPoint) / maxValue) * 100}%`,
+            }}
+          />
+        </div>
+
         <div
-          className="InspectorSeekLength-highlightedRange"
-          style={{
-            left: `${inPercent}%`,
-            width: `${outPercent - inPercent}%`
-          }}
-        />
-        <div
-          className="InspectorSeekLength-handle"
-          style={{ left: `${inPercent}%` }}
+          className="MediaRangeSelector-handle MediaRangeSelector-handle--in"
+          style={{ left: `${(inPoint / maxValue) * 100}%` }}
           onPointerDown={() => handlePointerDown('in')}
-        />
+        >
+          <span className="MediaRangeSelector-value">{millisecondsToTime(inPoint)}</span>
+        </div>
+
         <div
-          className="InspectorSeekLength-handle InspectorSeekLength-handle--out "
-          style={{ left: `${outPercent}%` }}
+          className="MediaRangeSelector-handle MediaRangeSelector-handle--out"
+          style={{ left: `${(outPoint / maxValue) * 100}%` }}
           onPointerDown={() => handlePointerDown('out')}
-        />
-      </div>
-      <div className="InspectorSeekLength-labels">
-        <span>{inPercent.toFixed(1)}%</span>
-        <span>{outPercent.toFixed(1)}%</span>
+        >
+          <div className="MediaRangeSelector-value">{millisecondsToTime(outPoint)}</div>
+        </div>
       </div>
     </div>
   )
+}
+
+function millisecondsToTime(ms) {
+  const totalSeconds = Math.floor(ms / 1000)
+  const hours = Math.floor((totalSeconds % 86400) / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  const pad = (n) => n.toString().padStart(2, '0')
+
+  if (hours > 0) {
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+  } else {
+    return `${pad(minutes)}:${pad(seconds)}`
+  } 
 }

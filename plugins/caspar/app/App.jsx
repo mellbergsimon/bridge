@@ -3,7 +3,7 @@ import React from 'react'
 import * as SharedContext from './sharedContext'
 import * as Settings from './views/Settings'
 
-import { InspectorSeek } from './views/InspectorSeek'
+import { InspectorRange } from './views/InspectorRange'
 import { InspectorServer } from './views/InspectorServer'
 import { InspectorTemplate } from './views/InspectorTemplate'
 import { InspectorTransition } from './views/InspectorTransition'
@@ -42,8 +42,8 @@ export default function App () {
               return <Status />
             case 'library':
               return <Library />
-            case 'inspector/seek':
-              return <InspectorSeek />
+            case 'inspector/range':
+              return <InspectorRange />
             default:
               return <></>
           }
