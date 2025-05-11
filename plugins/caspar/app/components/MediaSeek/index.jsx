@@ -6,9 +6,11 @@ export const MediaSeek = ({ inValue, outValue, maxValue, onChange }) => {
   const [dragging, setDragging] = useState(null)
   const [inPoint, setInPoint] = useState(inValue)
   const [outPoint, setOutPoint] = useState(outValue)
+  const [lastActiveHandle, setLastActiveHandle] = useState(null)
 
   const handlePointerDown = (type) => {
     setDragging(type)
+    setLastActiveHandle(type)
   }
 
   useEffect(() => {
@@ -66,7 +68,7 @@ export const MediaSeek = ({ inValue, outValue, maxValue, onChange }) => {
 
         <div
           className="MediaRangeSelector-handle MediaRangeSelector-handle--in"
-          style={{ left: `${(inPoint / maxValue) * 100}%` }}
+          style={{ left: `${(inPoint / maxValue) * 100}%`, zIndex: lastActiveHandle === 'in' ? 2 : 1 }}
           onPointerDown={() => handlePointerDown('in')}
         >
           <span className="MediaRangeSelector-value">{millisecondsToTime(inPoint)}</span>
@@ -74,7 +76,7 @@ export const MediaSeek = ({ inValue, outValue, maxValue, onChange }) => {
 
         <div
           className="MediaRangeSelector-handle MediaRangeSelector-handle--out"
-          style={{ left: `${(outPoint / maxValue) * 100}%` }}
+          style={{ left: `${(outPoint / maxValue) * 100}%`, zIndex: lastActiveHandle === 'out' ? 2 : 1 }}
           onPointerDown={() => handlePointerDown('out')}
         >
           <div className="MediaRangeSelector-value">{millisecondsToTime(outPoint)}</div>
