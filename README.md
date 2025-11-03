@@ -16,8 +16,13 @@ Developed for CasparCG but can control anything that supports OSC.
 - [x] 🧑‍💻 To be easily extendable with plugins and encourage contribution 
 - [x] 💪 To provide a reliable backbone for productions
 
+## Roadmap
+The roadmap is available on Notion  
+[View roadmap](https://bridge-playout.notion.site/2833cf582c13809d933edb438e165a0c?v=2833cf582c138040afe3000c90f38fb0)
+
 ## Table of contents
 - [Goals](#goals)
+- [Roadmap](#roadmap)
 - [Features](#features)
 - [Community plugins](#community-plugins)
 - [Compatibility](#compatibility-notes)
@@ -45,7 +50,7 @@ Developed for CasparCG but can control anything that supports OSC.
 - [CRON - triggers based on the time of day](https://github.com/axelboberg/bridge-plugin-cron)
 
 ## Compatibility notes  
-- Bridge works with Caspar CG Server 2.3 and up.
+- Bridge works best with CasparCG server 2.3 and up, although a compatibility mode is available for older setups.
 - Bridge provides data to HTML templates as JSON.
 
 ## Download and install  
