@@ -2,32 +2,48 @@ import React from 'react'
 import bridge from 'bridge'
 
 import { SharedContext } from '../sharedContext'
-
 import { RundownList } from '../components/RundownList'
-import { ContextAddMenu } from '../components/ContextAddMenu'
 
-import { ContextMenu } from '../../../../app/components/ContextMenu'
-import { ContextMenuItem } from '../../../../app/components/ContextMenuItem'
-import { ContextMenuDivider } from '../../../../app/components/ContextMenuDivider'
-
+import * as contextMenu from '../utils/contextMenu'
 import * as config from '../config'
-import * as clipboard from '../utils/clipboard'
+
+const INITIAL_RUNDOWN_ID = window.WIDGET_DATA?.['rundown.id'] || config.DEFAULT_RUNDOWN_ID
 
 export function Rundown () {
+  const [rundownId, setRundownId] = React.useState(INITIAL_RUNDOWN_ID)
   const [shared] = React.useContext(SharedContext)
-  const [contextPos, setContextPos] = React.useState()
 
   const elRef = React.useRef()
 
-  const rundownId = window.WIDGET_DATA?.['rundown.id'] || config.DEFAULT_RUNDOWN_ID
-
-  function handleContextMenu (e) {
-    e.preventDefault()
-    setContextPos([e.pageX, e.pageY])
+  function handleNewRundownId (newId) {
+    window.WIDGET_UPDATE({
+      'rundown.id': newId
+    })
+    setRundownId(newId)
   }
 
-  async function handleItemCreate (itemId) {
+  async function handleItemCreate (typeId) {
+    const itemId = await bridge.items.createItem(typeId)
     bridge.commands.executeCommand('rundown.appendItem', rundownId, itemId)
+  }
+
+  async function handleContextMenu (e) {
+    e.preventDefault()
+
+    const types = await bridge.state.get('_types')
+    bridge.ui.contextMenu.open([
+      {
+        type: 'item',
+        label: 'Paste',
+        onClick: () => handlePaste()
+      },
+      { type: 'divider' },
+      {
+        type: 'item',
+        label: 'Add',
+        children: contextMenu.generateAddContextMenuItems(types, typeId => handleItemCreate(typeId))
+      }
+    ], { x: e.screenX, y: e.screenY, searchable: true })
   }
 
   /**
@@ -66,8 +82,8 @@ export function Rundown () {
   }
 
   async function handlePaste () {
-    const items = await clipboard.readJson()
-    const selection = await bridge.client.getSelection()
+    const items = await bridge.client.clipboard.readJson()
+    const selection = await bridge.client.selection.getSelection()
 
     /*
     Paste the items into the
@@ -104,7 +120,7 @@ export function Rundown () {
       ids.push(element.dataset.itemId)
     }
 
-    bridge.client.setSelection(ids)
+    bridge.client.selection.setSelection(ids)
   }
 
   React.useEffect(() => {
@@ -135,20 +151,10 @@ export function Rundown () {
 
   return (
     <div ref={elRef} className='View' onContextMenu={e => handleContextMenu(e)}>
-      {
-        contextPos
-          ? (
-            <ContextMenu x={contextPos[0]} y={contextPos[1]} onClose={() => setContextPos(undefined)}>
-              <ContextMenuItem text='Paste' onClick={() => handlePaste()} />
-              <ContextMenuDivider />
-              <ContextMenuItem text='Add'>
-                <ContextAddMenu onAdd={newItemId => handleItemCreate(newItemId)}/>
-              </ContextMenuItem>
-            </ContextMenu>
-            )
-          : <></>
-      }
-      <RundownList rundownId={rundownId} />
+      <RundownList
+        rundownId={rundownId}
+        onChangeRundownId={newId => handleNewRundownId(newId)}
+      />
     </div>
   )
 }

@@ -11,8 +11,6 @@ import { RundownItemProgress } from '../RundownItemProgress'
 import { RundownList } from '../RundownList'
 import { Icon } from '../Icon'
 
-import { ContextMenuItem } from '../../../../../app/components/ContextMenuItem'
-
 export function RundownGroupItem ({ index, item }) {
   const [shared] = React.useContext(SharedContext)
 
@@ -33,7 +31,7 @@ export function RundownGroupItem ({ index, item }) {
       return
     }
 
-    const selection = await bridge.client.getSelection()
+    const selection = await bridge.client.selection.getSelection()
     if (!(selection.includes(item.id))) {
       return
     }
@@ -172,16 +170,16 @@ export function RundownGroupItem ({ index, item }) {
   )
 }
 
-export function RundownGroupItemContext ({ item }) {
+export function getContextMenuItems (ctx, item) {
   function handleEnterGroup () {
-    window.WIDGET_UPDATE({
-      'rundown.id': item.id
-    })
+    ctx.setRundownId(item.id)
   }
 
-  return (
-    <>
-      <ContextMenuItem text='Step inside' onClick={() => handleEnterGroup()} />
-    </>
-  )
+  return [
+    {
+      type: 'item',
+      label: 'Step inside',
+      onClick: () => handleEnterGroup()
+    }
+  ]
 }

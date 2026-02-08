@@ -2,14 +2,25 @@ import React from 'react'
 
 import { v4 as uuidv4 } from 'uuid'
 
-import { SharedContext } from '../../sharedContext'
 import { LocalContext } from '../../localContext'
+
+import { Icon } from '../Icon'
 
 import * as shortcuts from '../../utils/shortcuts'
 import * as browser from '../../utils/browser'
 import * as api from '../../api'
 
 import './style.css'
+
+/**
+ * The workspace id for
+ * the current workspace
+ * @type { String }
+ */
+const workspaceId = window.APP.workspace
+
+const host = window.APP.address
+const port = window.APP.port
 
 /**
  * Whether or not to enable
@@ -79,10 +90,8 @@ function copyThemeVariables (iframe, variables = COPY_THEME_VARIABLES) {
   }
 }
 
-export function FrameComponent ({ data, onUpdate }) {
+export function FrameComponent ({ widgetId, uri, widgets, data, onUpdate, enableFloat = true }) {
   const [caller] = React.useState(uuidv4())
-
-  const [shared] = React.useContext(SharedContext)
   const [local] = React.useContext(LocalContext)
 
   const [hasFocus, setHasFocus] = React.useState(false)
@@ -90,6 +99,11 @@ export function FrameComponent ({ data, onUpdate }) {
   const snapshotRef = React.useRef()
   const wrapperRef = React.useRef()
   const frameRef = React.useRef()
+
+  const onUpdateRef = React.useRef()
+  React.useEffect(() => {
+    onUpdateRef.current = onUpdate
+  }, [onUpdate])
 
   React.useEffect(() => {
     async function setup () {
@@ -127,7 +141,7 @@ export function FrameComponent ({ data, onUpdate }) {
       removal
       */
       frameRef.current.contentWindow.WIDGET_UPDATE = set => {
-        onUpdate(set)
+        onUpdateRef.current(set)
       }
 
       /*
@@ -151,14 +165,19 @@ export function FrameComponent ({ data, onUpdate }) {
       }
     }
 
-    const uri = shared?._widgets[data.component]?.uri
+    /*
+    Prevent re-mounting the iframe
+    unless absolutely necessary
 
+    Without this check, the iframe would reload
+    every time the user changes the layout
+    */
     const snapshot = JSON.stringify([data, uri])
     if (snapshot === snapshotRef.current) return
     snapshotRef.current = snapshot
 
     setup()
-  }, [data, shared, onUpdate])
+  }, [uri, data])
 
   /*
   Clean up all event listeners 
@@ -171,7 +190,7 @@ export function FrameComponent ({ data, onUpdate }) {
       bridge.events.removeAllListeners(caller)
       bridge.events.removeAllIntercepts(caller)
     }
-  }, [caller, shared?._widgets[data.component]?.uri])
+  }, [caller, uri])
 
   /*
   Highligh the component
@@ -182,12 +201,22 @@ export function FrameComponent ({ data, onUpdate }) {
     if (!contentWindow) {
       return
     }
-    function onFocus () {
+
+    async function onClick () {
+      const bridge = await api.load()
+      bridge.ui.contextMenu.close()
+    }
+    contentWindow.addEventListener('click', onClick)
+
+    async function onFocus () {
       setHasFocus(true)
       contentWindow.bridgeFrameHasFocus = true
+      
+      const bridge = await api.load()
+      bridge.ui.contextMenu.close()
     }
     contentWindow.addEventListener('focus', onFocus)
-
+    
     function onBlur () {
       setHasFocus(false)
       contentWindow.bridgeFrameHasFocus = false
@@ -195,6 +224,7 @@ export function FrameComponent ({ data, onUpdate }) {
     contentWindow.addEventListener('blur', onBlur)
 
     return () => {
+      contentWindow.removeEventListener('click', onClick)
       contentWindow.removeEventListener('focus', onFocus)
       contentWindow.removeEventListener('blur', onBlur)
     }
@@ -224,10 +254,33 @@ export function FrameComponent ({ data, onUpdate }) {
     copyThemeVariables(frameRef.current)
   }, [local.appliedTheme])
 
+  async function handleOpenAsWindow (widgetId) {
+    const url = `http://${host}:${port}/workspaces/${workspaceId}/widgets/${widgetId}`
+
+    if (browser.isElectron()) {
+      const bridge = await api.load()
+      bridge.commands.executeCommand('window.openChildWindow', url)
+    } else {
+      window.open(url, '_blank', {
+        popup: true
+      })
+    }
+  }
+
   return (
     <div className={`FrameComponent ${hasFocus ? 'is-focused' : ''}`}>
       <header className='FrameComponent-header'>
-        {shared?._widgets[data.component]?.name}
+        <div>
+          {widgets?.[data.component]?.name}
+        </div>
+        <div className='FrameComponent-headerButtons'>
+          {
+            enableFloat && widgets?.[data.component]?.supportsFloat &&
+            <button className='FrameComponent-headerButton' onClick={() => handleOpenAsWindow(widgetId)}>
+              <Icon name='float' />
+            </button>
+          }
+        </div>
       </header>
       <div ref={wrapperRef} className='FrameComponent-wrapper' />
     </div>

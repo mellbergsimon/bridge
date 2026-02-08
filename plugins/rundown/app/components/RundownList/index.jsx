@@ -6,8 +6,9 @@ import './style.css'
 import { SharedContext } from '../../sharedContext'
 
 import { RundownVariableItem } from '../RundownVariableItem'
+import { RundownTriggerItem } from '../RundownTriggerItem'
 import { RundownDividerItem } from '../RundownDividerItem'
-import { RundownGroupItem, RundownGroupItemContext } from '../RundownGroupItem'
+import { RundownGroupItem, getContextMenuItems as rundownGroupItemGetContextMenuItems } from '../RundownGroupItem'
 import { RundownListItem } from '../RundownListItem'
 import { RundownItem } from '../RundownItem'
 
@@ -23,10 +24,11 @@ import * as keyboard from '../../utils/keyboard'
  */
 const TYPE_COMPONENTS = {
   'bridge.variables.variable': { item: RundownVariableItem },
+  'bridge.types.trigger': { item: RundownTriggerItem },
   'bridge.types.divider': { item: RundownDividerItem },
   'bridge.types.group': {
     item: RundownGroupItem,
-    context: RundownGroupItemContext
+    getContextMenuItems: (ctx, item) => rundownGroupItemGetContextMenuItems(ctx, item)
   }
 }
 
@@ -60,23 +62,50 @@ function scrollIntoView (el, animate = true, centered = true) {
   })
 }
 
+/**
+ * Blur the currently active element,
+ * this should be called on mousedown
+ * as that will enable the following
+ * focus event
+ * 
+ * Without this an element that just was focused won't
+ * trigger the focus event when clicked a second time,
+ * causing the CMD+select operation to have no effect –
+ * when it should, in fact, unselect the item
+ * 
+ * mousedown is always triggered before focus
+ */
+function blurActiveElementBeforeFocus () {
+  document.activeElement?.blur()
+}
+
 export function RundownList ({
   rundownId = '',
   className = '',
   indexPrefix = '',
-  disableShortcuts = false
+  disableShortcuts = false,
+  onChangeRundownId = () => {}
 }) {
   const [shared] = React.useContext(SharedContext)
 
   const elRef = React.useRef()
+  const typeCacheRef = React.useRef({})
+
   const itemIds = shared?.items?.[rundownId]?.children || []
-  const selection = shared?._connections?.[bridge.client.getIdentity()]?.selection || []
 
   const scrollSettings = shared?.plugins?.['bridge-plugin-rundown']?.settings?.scrolling
 
   function getItemElementById (id) {
     return elRef.current.querySelector(`[data-item-id="${id}"]`)
   }
+
+  /*
+  Clear the type cache whenever
+  registered types change
+  */
+  React.useEffect(() => {
+    typeCacheRef.current = {}
+  }, [shared?._types])
 
   /**
    * Focus a list item based on the
@@ -109,7 +138,7 @@ export function RundownList ({
       return
     }
 
-    const selection = await bridge.client.getSelection()
+    const selection = await bridge.client.selection.getSelection()
 
     /*
     Find the currently selected item id,
@@ -235,7 +264,7 @@ export function RundownList ({
     hasDoneInitialScrollingRef.current = true
 
     ;(async function () {
-      const selection = await bridge.client.getSelection()
+      const selection = await bridge.client.selection.getSelection()
       const lastId = selection[selection.length - 1]
       if (!lastId) {
         return
@@ -264,9 +293,7 @@ export function RundownList ({
           console.warn('Dropped spec is missing type')
           return
         }
-        const itemId = await bridge.items.createItem(spec.type)
-
-        bridge.items.applyItem(itemId, spec)
+        const itemId = await bridge.items.createItem(spec.type, spec?.data)
         bridge.commands.executeCommand('rundown.moveItem', rundownId, newIndex, itemId)
       } catch (_) {
         console.warn('Tried to drop an invalid spec')
@@ -277,23 +304,61 @@ export function RundownList ({
   }
 
   async function handleFocus (itemId) {
+    /*
+    Handle selection
+    using the meta key
+    */
     if (keyboard.keyIsPressed('meta')) {
-      const isSelected = await bridge.client.isSelected(itemId)
+      const isSelected = bridge.client.selection.isSelected(itemId)
       if (isSelected) {
-        bridge.client.subtractSelection(itemId)
+        bridge.client.selection.subtractSelection(itemId)
       } else {
-        bridge.client.addSelection(itemId)
+        bridge.client.selection.addSelection(itemId)
       }
       return
     }
 
+    /*
+    Handle selection
+    using the shift key by
+    looking up all elements
+    between the focused ones
+    and adding them to the
+    selection
+    */
     if (keyboard.keyIsPressed('shift')) {
-      // Select all items between the last selection and the new item
-      // Check data-item-id
+      const selection = await bridge.client.selection.getSelection()
+      const lastSelection = selection[selection.length - 1]
+
+      if (!lastSelection) {
+        bridge.client.selection.addSelection(itemId)
+        return
+      }
+
+      const listItems = Array.from(elRef.current.querySelectorAll('.RundownListItem'))
+      const indexA = listItems.findIndex(el => el.dataset.itemId === lastSelection)
+      const indexB = listItems.findIndex(el => el.dataset.itemId === itemId)
+
+      const firstIndex = Math.min(indexA, indexB)
+      const lastIndex = Math.max(indexA, indexB)
+
+      const itemsBetween = listItems
+        .slice(firstIndex, lastIndex + 1)
+        .map(el => el.dataset.itemId)
+
+      /*
+      Make sure that all elements are added
+      to the selection in the correct order
+      */
+      if (indexA > indexB) {
+        itemsBetween.reverse()
+      }
+
+      bridge.client.selection.addSelection(itemsBetween)
       return
     }
 
-    bridge.client.setSelection(itemId)
+    bridge.client.selection.setSelection(itemId)
   }
 
   function handleFocusPropagation (e) {
@@ -314,6 +379,42 @@ export function RundownList ({
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault()
     }
+  }
+
+  function getCachedType (typeId) {
+    return typeCacheRef?.current?.[typeId]
+  }
+
+  function setCachedType (typeId, typeData) {
+    if (!typeCacheRef.current) {
+      typeCacheRef.current = {}
+    }
+    typeCacheRef.current[typeId] = typeData
+  }
+
+  function getRenderedType (typeId) {
+    const cachedType = getCachedType(typeId)
+    if (cachedType) {
+      return cachedType
+    }
+
+    const rendered = bridge.types.renderType(typeId, shared?._types || {})
+    setCachedType(typeId, rendered)
+    return rendered
+  }
+
+  /*
+  Find a matching component based
+  on the ancestors of the type
+  */
+  function getTypeComponent (typeId) {
+    const type = getRenderedType(typeId)
+    for (const ancestor of [...type.ancestors, typeId].reverse()) {
+      if (TYPE_COMPONENTS[ancestor]?.item) {
+        return TYPE_COMPONENTS[ancestor]?.item
+      }
+    }
+    return RundownItem
   }
 
   return (
@@ -340,9 +441,16 @@ export function RundownList ({
           .map(id => bridge.items.getLocalItem(id))
           .filter(item => item)
           .map((item, i) => {
-            const isSelected = selection?.includes(item.id)
-            const ItemComponent = TYPE_COMPONENTS[item.type]?.item || RundownItem
-            const ExtraContextComponent = TYPE_COMPONENTS[item.type]?.context
+            const ItemComponent = getTypeComponent(item.type)
+            const isSelected = bridge.client.selection.isSelected(item.id)
+
+            let contextMenuItems
+            if (typeof TYPE_COMPONENTS[item.type]?.getContextMenuItems === 'function') {
+              contextMenuItems = TYPE_COMPONENTS[item.type].getContextMenuItems({
+                setRundownId: onChangeRundownId
+              }, item)
+            }
+
             return (
               <RundownListItem
                 key={item.id}
@@ -350,8 +458,9 @@ export function RundownList ({
                 index={i}
                 rundownId={rundownId}
                 onDrop={e => handleDrop(e, i)}
-                onFocus={() => handleFocus(item.id)}
-                extraContextItems={ExtraContextComponent}
+                onFocus={e => handleFocus(item.id)}
+                onMouseDown={e => blurActiveElementBeforeFocus()}
+                contextMenuItems={contextMenuItems}
                 selected={isSelected}
               >
                 <ItemComponent index={`${indexPrefix}${i + 1}`} item={item}/>

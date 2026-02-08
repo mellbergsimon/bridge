@@ -2,18 +2,20 @@
 //
 // SPDX-License-Identifier: MIT
 
+const ApiError = require('../error/ApiError')
 const MissingIdentityError = require('../error/MissingIdentityError')
 const InvalidArgumentError = require('../error/InvalidArgumentError')
 
-const LazyValue = require('../classes/LazyValue')
+const LazyValue = require('../../shared/LazyValue')
 const DIController = require('../../shared/DIController')
+
+require('./clipboard')
+require('./selection')
 
 /**
  * @typedef {{
  *  id: String,
  *  role: Number,
- *  heartbeat: Number,
- *  isPersistent: Boolean,
  *  isEditingLayout: Boolean
  * }} Connection
  *
@@ -21,34 +23,6 @@ const DIController = require('../../shared/DIController')
  *   caller: String
  * }} ClientSelectionState
  */
-
-/**
- * The default state object,
- * if nothing else is specified,
- * for the 'selection' event
- *
- * @type { ClientSelectionState }
- */
-const DEFAULT_SELECTION_EVENT_STATE = {
-  caller: undefined
-}
-
-/**
- * @private
- * Ensure that a 'thing' is an array,
- * if it's not, one will be created and
- * the 'thing' will be inserted
- * @param { any } thing Anything to make into an array
- *                      if it isn't one already
- * @returns { any[] }
- */
-function ensureArray (thing) {
-  let arr = thing
-  if (!Array.isArray(thing)) {
-    arr = [thing]
-  }
-  return arr
-}
 
 class Client {
   #props
@@ -64,8 +38,17 @@ class Client {
     })
   }
 
+  get selection () {
+    return this.#props.Selection
+  }
+
+  get clipboard () {
+    return this.#props.Clipboard
+  }
+
   constructor (props) {
     this.#props = props
+    this.#props.Selection.client = this
   }
 
   /**
@@ -116,127 +99,27 @@ class Client {
   }
 
   /**
-   * Select an item,
-   * will replace the
-   * current selection
-   * @param { String } item A string to select
-   *//**
-  * Select multiple items,
-  * will replace the
-  * current selection
-  * @param { String[] } item Multiple items to select
-  * @param { ClientSelectionState } state An optional state to pass with the event
-  */
-  async setSelection (item, state = DEFAULT_SELECTION_EVENT_STATE) {
-    this.assertIdentity()
-
-    const items = ensureArray(item)
-    await this.#props.State.apply({
-      _connections: {
-        [this.getIdentity()]: {
-          selection: { $replace: items }
-        }
-      }
-    })
-
-    this.#props.Events.emitLocally('selection', items, state)
-  }
-
-  /**
-   * Select an item by adding to the
-   * client's already existing selection
-   * @param { String } item The id of an item to add
-   *//**
-  * Select multiple items by adding to
-  * the client's already existing selection
-  * @param { String[] } item An array of ids for
-  *                           the items to add
-  */
-  async addSelection (item) {
-    this.assertIdentity()
-
-    const currentSelection = await this.getSelection()
-    const newSelectionSet = new Set(Array.isArray(currentSelection) ? currentSelection : [])
-    const newItems = ensureArray(item)
-
-    for (const item of newItems) {
-      newSelectionSet.add(item)
-    }
-
-    const newSelection = Array.from(newSelectionSet.values())
-
-    await this.#props.State.apply({
-      _connections: {
-        [this.getIdentity()]: {
-          selection: { $replace: newSelection }
-        }
-      }
-    })
-    this.#props.Events.emitLocally('selection', newSelection, DEFAULT_SELECTION_EVENT_STATE)
-  }
-
-  /**
-   * Subtract an item from
-   * the current selection
-   * @param { String } item The id of an item to subtract
-   *//**
-  * Subtract multiple items
-  * from the current selection
-  * @param { String[] } item An array of ids of items to subtract
-  */
-  subtractSelection (item) {
-    this.assertIdentity()
-
-    const selection = this.#props.State.getLocalState()?._connections?.[this.getIdentity()]?.selection
-    if (!selection) {
-      return
-    }
-
-    const items = new Set(ensureArray(item))
-    const newSelection = selection.filter(id => !items.has(id))
-
-    this.setSelection(newSelection, newSelection)
-  }
-
-  /**
-   * Check whether or not an
-   * item is in the selection
-   * @param { String } item The id of an item to check
-   * @returns { Boolean }
+   * Register this instance as
+   * a new client with the API
+   * @returns
    */
-  async isSelected (item) {
-    this.assertIdentity()
-    const selection = await this.#props.State.get(`_connections.${this.getIdentity()}.selection`)
-    if (!selection) {
-      return false
+  async registerClient () {
+    if (this.getIdentity()) {
+      throw new ApiError('This client has already been registered')
     }
-    return selection.includes(item)
+    const id = await this.#props.Commands.executeCommand('client.registerClient')
+    this.setIdentity(id)
+    return id
   }
 
   /**
-   * Clear the current selection
+   * Remove this client from the API,
+   * this should be called before the
+   * client closes
    */
-  async clearSelection () {
+  removeClient () {
     this.assertIdentity()
-
-    await this.#props.State.apply({
-      _connections: {
-        [this.getIdentity()]: {
-          selection: { $delete: true }
-        }
-      }
-    })
-
-    this.#props.Events.emitLocally('selection', [], DEFAULT_SELECTION_EVENT_STATE)
-  }
-
-  /**
-   * Get the current selection
-   * @returns { Promise.<String[]> }
-   */
-  async getSelection () {
-    this.assertIdentity()
-    return (await this.#props.State.get(`_connections.${this.getIdentity()}.selection`)) || []
+    this.#props.Commands.executeCommand('client.removeClient', this.getIdentity())
   }
 
   /**
@@ -307,19 +190,12 @@ class Client {
     return (await this.getAllConnections())
       .filter(connection => connection.role === role)
   }
-
-  /**
-   * Send a heartbeat
-   * for this client
-   */
-  async heartbeat () {
-    const id = await this.awaitIdentity()
-    this.#props.Commands.executeRawCommand('client.heartbeat', id)
-  }
 }
 
 DIController.main.register('Client', Client, [
   'State',
   'Events',
-  'Commands'
+  'Commands',
+  'Clipboard',
+  'Selection'
 ])

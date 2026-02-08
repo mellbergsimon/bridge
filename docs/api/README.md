@@ -14,10 +14,13 @@ Bridge provides a JavaScript api for use in plugins and their widgets.
 - [Types](#types)
 - [Items](#items)
 - [Client](#client)
+  - [Clipboard](#clipboard)
 - [Variables](#variables)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [System](#system)
 - [Messages](#messages)
+- [UI](#ui)
+  - [Context menus](#context-menus)
 
 ## Getting started  
 The api is available for plugins and widgets running in either the main process or browser processes of Bridge and can be included as follows. The module will be provided by Bridge at runtime.
@@ -63,15 +66,17 @@ bridge.events.on('item.stop', item => {
 ```
 
 ### Available events
-| Event | Description |
-| ----- | ----------- |
-| `state.change` | Emitted every time the remote state changes |
-| `item.play` | Emitted when an item is played, after an optional delay |
-| `item.stop` | Emitted when an item is stopped |
-| `item.end` | Emitted when an item ends, this will not trigger when an item is stopped |
-| `item.apply` | Emitted when an item data is applied to an item using the item.apply api, this can be used to react to item changes |
-| `shortcut` | Emitted when a shortcut is triggered |
-| `selection` | Emitted when the selection of the current client changes |
+| Event | Description | Availability |
+| ----- | ----------- | ------------ |
+| `state.change` | Emitted every time the remote state changes | Everywhere |
+| `item.play` | Emitted when an item is played, after an optional delay | Everywhere |
+| `item.stop` | Emitted when an item is stopped | Everywhere |
+| `item.end` | Emitted when an item ends, this will not trigger when an item is stopped | Everywhere |
+| `item.apply` | Emitted when an item data is applied to an item using the item.apply api, this can be used to react to item changes | Everywhere |
+| `shortcut` | Emitted when a shortcut is triggered | Browser |
+| `selection` | Emitted when the selection of the current client changes | Browser |
+| `ui.contextMenu.open` | A context menu was opened | Browser |
+| `ui.contextMenu.close` | A context menu was closed | Browser |
 
 ### `bridge.events.emit(event, ...parameters)`
 Emit an event with or without any data
@@ -92,7 +97,7 @@ Remove a listener for an event
 ## State
 The state is a shared object representing the workspace, this is used to render the UI as well as keeping track of settings
 
-### `bridge.state.apply(set|sets)`
+### `bridge.state.apply(set|sets)`  `bridge.state.apply(path, set)`
 Apply an object to the state using a deep apply algorithm. Listeners for the event `state.change` will be immediately called.
 
 **Note**  
@@ -215,7 +220,8 @@ bridge.widgets.registerWidget({
   id: 'myplugin.widget',
   name: 'My widget',
   uri: '/server/id-of-widget-entry',
-  description: 'A widget meant for demo purposes'
+  description: 'A widget meant for demo purposes',
+  supportsFloat: true
 })
 ```
 
@@ -379,11 +385,7 @@ Await the current identity to be set, will return as soon as the identity is set
 **Only available within the render process**  
 Get the client's identity as set by the host app. This may be undefined if it has not yet been set. It's useful for manually getting client parameters if optimizing queries to the state.
 
-### `bridge.client.heartbeat(): Promise<void>`  
-**Only available within the render process**  
-Send a heartbeat
-
-### `bridge.client.setSelection(itemIds[, state])`  
+### `bridge.client.selection.setSelection(itemIds[, state])`  
 **Only available within the render process**  
 Select one or multiple items, will clear the current selection.
 
@@ -395,27 +397,27 @@ A state object can be included which will be forwarded to event handlers of the 
 }
 ```
 
-### `bridge.client.addSelection(itemId|itemIds)`  
+### `bridge.client.selection.addSelection(itemId|itemIds)`  
 **Only available within the render process**  
 Add one or more items to the selecton by their ids.
 
-### `bridge.client.subtractSelection(itemId|itemIds)`  
+### `bridge.client.selection.subtractSelection(itemId|itemIds)`  
 **Only available within the render process**  
 Subtract one or more items to the selecton by their ids.
 
-### `bridge.client.isSelected(itemId): Promise<Boolean>`  
+### `bridge.client.selection.isSelected(itemId): Promise<Boolean>`  
 **Only available within the render process**  
 Check whether or not an item is selected by the current client.  
 
-### `bridge.client.clearSelection()`  
+### `bridge.client.selection.clearSelection()`  
 **Only available within the render process**  
 Clear the current selection
 
-### `bridge.client.getSelection(): Promise<String[]>`  
+### `bridge.client.selection.getSelection(): Promise<String[]>`  
 **Only available within the render process**  
 Get the current selection  
 
-### `bridge.client.getSelection(connectionId): Promise<String[]>`  
+### `bridge.client.selection.getSelection(connectionId): Promise<String[]>`  
 **Only available within main processes**  
 Get the current selection of a connection by its id  
 
@@ -427,6 +429,20 @@ Get an array of all current connections
 
 ### `bridge.client.getAllConnectionsByRole(role): Promise<Connection[]>`  
 Get an array of all current connections with a specific role
+
+
+### Clipboard
+
+**Note: this API is only available in widgets (browser process)**
+
+#### `bridge.client.clipboard.writeText(string): Promise.<any?>`
+Write a string to the clipboard
+
+#### `bridge.client.clipboard.readJson(): Promise<object?>`
+Retrieve the contents of the clipboard as an object
+
+#### `bridge.client.clipboard.readText(): Promise<object?>`
+Retrieve the contents of the clipboard as a string
 
 ## Variables
 
@@ -567,4 +583,83 @@ bridge.messages.createWarningMessage({
   text: 'MyPlugin: My warning',
   ttl: 5000 // Default, optional, hides the message after 5s
 })
+```
+
+## UI
+
+### Context menus
+
+**Note: this API is only available in widgets (browser process)**
+
+#### `bridge.ui.contextMenu.open(spec, opts): void`
+Open a context menu at the screen x and screen y position specified in the options object
+
+This api is designed to be used together with the native contextmenu event
+
+Opening a context menu while there's already one open will automatically close the first one
+
+```javascript
+import bridge from 'bridge'
+
+/*
+Define items and
+their actions
+*/
+const spec = [
+  {
+    {
+      type: 'item',
+      label: 'My first item',
+      onClick: () => {} // Do something when the item is activated
+    },
+    { type: 'divider' },
+    {
+      type: 'item',
+      label: 'My submenu',
+      children: [
+        {
+          type: 'item',
+          label: 'Another item',
+          onClick: () => {}
+        },
+        {
+          type: 'item',
+          label: 'A third item',
+          onClick: () => {}
+        }
+      ]
+    }
+  }
+]
+
+window.addEventListener('contextmenu', e => {
+  bridge.ui.contextMenu.open(spec, {
+    x: e.screenX, // Required
+    y: e.screenY, // Required
+    searchable: true // Optional, defaults to false, whether or not to show a search field and allow the user to search for any items in the menu
+  })
+})
+```
+
+**Tip!**  
+Use the `ui.contextMenu.close` and `ui.contextMenu.open` events to act when a menu is closed or opened by the user or the system
+
+```javascript
+import bridge from 'bridge'
+
+bridge.events.on('ui.contextMenu.close', () => {
+  // Do something when the context menu closed
+})
+
+bridge.events.on('ui.contextMenu.open', () => {
+  // Do something when the context menu opened
+})
+```
+
+#### `bridge.ui.contextMenu.close(): void`
+Close any opened context menus, this does not need to be called as a response to the `ui.contextMenu.close` event but is to be used should you, the developer, want to close the menu programatically
+
+```javascript
+import bridge from 'bridge'
+bridge.ui.contextMenu.close()
 ```

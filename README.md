@@ -11,7 +11,6 @@ Developed for CasparCG but can control anything that supports OSC.
 ![Screenshot](/media/screenshot.png)
 
 ## Goals
-
 - [x] ⚡️ To be a server agnostic, lightweight and quick playout client
 - [x] 🧑‍💻 To be easily extendable with plugins and encourage contribution 
 - [x] 💪 To provide a reliable backbone for productions
@@ -45,6 +44,7 @@ The roadmap is available on Notion
 - OSC API and triggers
 - HTTP triggers
 - CasparCG library, playout and templates
+- LTC timecode triggers
 
 ## Community plugins  
 - [CRON - triggers based on the time of day](https://github.com/axelboberg/bridge-plugin-cron)

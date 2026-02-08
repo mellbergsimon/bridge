@@ -24,6 +24,9 @@ const PLAY_HANDLERS = {
   'bridge.caspar.media': async (serverId, item) => {
     return commands.sendCommand(serverId, 'play', item?.data?.caspar?.target, item?.data?.caspar?.loop, item?.data?.caspar?.seek, item?.data?.caspar?.length, undefined, undefined, item?.data?.caspar)
   },
+  'bridge.caspar.image-scroller': async (serverId, item) => {
+    return commands.sendCommand(serverId, 'playImageScroller', item?.data?.caspar?.target, item?.data?.caspar)
+  },
   'bridge.caspar.load': async (serverId, item) => {
     return commands.sendCommand(serverId, 'loadbg', item?.data?.caspar?.target, item?.data?.caspar?.loop, 0, undefined, undefined, item?.data?.caspar?.auto, item?.data?.caspar)
   },
@@ -38,11 +41,17 @@ const PLAY_HANDLERS = {
   },
   'bridge.caspar.volume': (serverId, item) => {
     return commands.sendCommand(serverId, 'mixerVolume', item?.data?.caspar?.volume, item?.data?.caspar)
+  },
+  'bridge.caspar.html': (serverId, item) => {
+    return commands.sendCommand(serverId, 'html', item?.data?.caspar?.url, item?.data?.caspar)
   }
 }
 
 const STOP_HANDLERS = {
   'bridge.caspar.media': (serverId, item) => {
+    return commands.sendCommand(serverId, 'stop', item?.data?.caspar)
+  },
+  'bridge.caspar.image-scroller': (serverId, item) => {
     return commands.sendCommand(serverId, 'stop', item?.data?.caspar)
   },
   'bridge.caspar.load': async (serverId, item) => {
@@ -59,6 +68,9 @@ const STOP_HANDLERS = {
   },
   'bridge.caspar.volume': (serverId, item) => {
     return commands.sendCommand(serverId, 'mixerVolume', '1.0', { ...(item?.data?.caspar || {}), transitionDuration: 0 })
+  },
+  'bridge.caspar.html': (serverId, item) => {
+    return commands.sendCommand(serverId, 'stop', item?.data?.caspar)
   }
 }
 

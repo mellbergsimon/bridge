@@ -1,14 +1,12 @@
 import bridge from 'bridge'
 
-import * as clipboard from './clipboard'
-
 /**
  * Toggle the disabled property
  * of the currently selected items
  * @returns { Promise.<void> }
  */
 export async function toggleDisableSelection () {
-  const selection = await bridge.client.getSelection()
+  const selection = await bridge.client.selection.getSelection()
 
   const set = {
     items: {}
@@ -31,7 +29,7 @@ export async function toggleDisableSelection () {
  * @returns { Promise.<void> }
  */
 export async function disableSelection (disabled) {
-  const selection = await bridge.client.getSelection()
+  const selection = await bridge.client.selection.getSelection()
 
   const set = {
     items: {}
@@ -57,7 +55,7 @@ export async function disableSelection (disabled) {
  * @returns { Promise.<void> }
  */
 export async function deleteSelection () {
-  const selection = await bridge.client.getSelection()
+  const selection = await bridge.client.selection.getSelection()
   bridge.items.deleteItems(selection)
 }
 
@@ -68,9 +66,9 @@ export async function deleteSelection () {
  * @returns { Promise.<void> }
  */
 export async function copySelection () {
-  const selection = await bridge.client.getSelection()
+  const selection = await bridge.client.selection.getSelection()
   const str = await bridge.commands.executeCommand('rundown.copyItems', selection)
-  await clipboard.copyText(str)
+  await bridge.client.clipboard.writeText(str)
 }
 
 /**
@@ -78,7 +76,7 @@ export async function copySelection () {
  * @returns { Promise.<void> }
  */
 export async function playSelection () {
-  const selection = await bridge.client.getSelection()
+  const selection = await bridge.client.selection.getSelection()
   selection.forEach(itemId => bridge.items.playItem(itemId))
 }
 
@@ -87,6 +85,6 @@ export async function playSelection () {
  * @returns { Promise.<void> }
  */
 export async function stopSelection () {
-  const selection = await bridge.client.getSelection()
+  const selection = await bridge.client.selection.getSelection()
   selection.forEach(itemId => bridge.items.stopItem(itemId))
 }

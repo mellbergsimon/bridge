@@ -37,31 +37,6 @@
         }
       },
       {
-        "id": "bridge.types.playable",
-        "inherits": "bridge.types.root",
-        "properties": {
-          "tag": {
-            "name": "Tag",
-            "type": "string",
-            "ui.group": "Timing"
-          },
-          "onPlay": {
-            "name": "On play",
-            "type": "enum",
-            "default": 0,
-            "enum": ["Do nothing", "Play next sibling", "Select next sibling (main client)"],
-            "ui.group": "Timing"
-          },
-          "onEnd": {
-            "name": "On end",
-            "type": "enum",
-            "default": 0,
-            "enum": ["Do nothing", "Play next sibling", "Select next sibling (main client)"],
-            "ui.group": "Timing"
-          }
-        }
-      },
-      {
         "id": "bridge.types.delayable",
         "inherits": "bridge.types.playable",
         "properties": {
@@ -78,6 +53,9 @@
         "id": "bridge.types.media",
         "inherits": "bridge.types.playable",
         "properties": {
+          "name": {
+            "default": "Media"
+          },
           "duration": {
             "name": "Duration",
             "type": "string",
@@ -98,6 +76,9 @@
         "name": "Group",
         "inherits": "bridge.types.media",
         "properties": {
+          "name": {
+            "default": "Group"
+          },
           "playMode": {
             "name": "Play mode",
             "type": "enum",
@@ -111,6 +92,46 @@
         "id": "bridge.types.divider",
         "name": "Divider",
         "inherits": "bridge.types.root"
+      },
+      {
+        "id": "bridge.types.trigger",
+        "inherits": "bridge.types.reference",
+        "category": "Triggers",
+        "ui.icon": "trigger",
+        "properties": {
+          "name": {
+            "default": "Trigger"
+          },
+          "color": {
+            "default": "#E543FF"
+          }
+        }
+      }
+    ],
+    "settings": [
+      {
+        "group": "Types",
+        "title": "Default on play action",
+        "inputs": [
+          {
+            "type": "select",
+            "label": "Save the project and restart Bridge for this setting to take effect",
+            "bind": "shared.plugins.bridge-plugin-types.settings.defaults.onPlay",
+            "options": ["Do nothing", "Play next sibling", "Select next sibling (main client)"]
+          }
+        ]
+      },
+      {
+        "group": "Types",
+        "title": "Default on end action",
+        "inputs": [
+          {
+            "type": "select",
+            "label": "Save the project and restart Bridge for this setting to take effect",
+            "bind": "shared.plugins.bridge-plugin-types.settings.defaults.onEnd",
+            "options": ["Do nothing", "Play next sibling", "Select next sibling (main client)"]
+          }
+        ]
       }
     ]
   },

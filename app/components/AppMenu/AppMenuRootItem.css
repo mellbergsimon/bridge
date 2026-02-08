@@ -1,0 +1,10 @@
+.AppMenuRootItem {
+  padding: 0.4em 0.8em;
+  border-radius: 7px;
+  font-size: 0.9em;
+}
+
+.AppMenuRootItem:hover,
+.AppMenuRootItem:focus {
+  background: var(--base-color--shade);
+}

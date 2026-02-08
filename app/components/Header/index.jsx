@@ -3,36 +3,86 @@ import React from 'react'
 import { SharedContext } from '../../sharedContext'
 import { LocalContext } from '../../localContext'
 
-import { Role } from '../Role'
 import { Modal } from '../Modal'
-import { Sharing } from '../Sharing'
+import { AppMenu } from '../AppMenu'
+import { Palette } from '../Palette'
 import { Preferences } from '../Preferences'
 
 import { Icon } from '../Icon'
 
 import * as api from '../../api'
+import * as windowUtils from '../../utils/window'
 
 import './style.css'
 
-function isMacOS () {
-  return window.APP.platform === 'darwin'
+const DEFAULT_TITLE = 'Unnamed'
+
+function handleReload () {
+  window.location.reload()
 }
 
-function isElectron () {
-  return window.navigator.userAgent.includes('Bridge')
-}
-
-export function Header ({ title = 'Bridge' }) {
+export function Header ({ title = DEFAULT_TITLE, features }) {
   const [shared, applyShared] = React.useContext(SharedContext)
   const [local] = React.useContext(LocalContext)
 
-  const [sharingOpen, setSharingOpen] = React.useState(false)
-  const [prefsOpen, setPrefsOpen] = React.useState(false)
-  const [roleOpen, setRoleOpen] = React.useState(false)
+  const [stayOnTop, setStayOnTop] = React.useState()
 
-  const connectionCount = Object.keys(shared?._connections || {}).length
+  const [paletteIsOpen, setPaletteIsOpen] = React.useState(false)
+  const [prefsOpen, setPrefsOpen] = React.useState(false)
+
   const isEditingLayout = shared?._connections?.[local?.id]?.isEditingLayout
-  const role = shared?._connections?.[local.id]?.role
+
+  /*
+  Listen for shortcuts
+  to open the palette
+  */
+  React.useEffect(() => {
+    function onShortcut (shortcut) {
+      switch (shortcut) {
+        case 'openPalette':
+          setPaletteIsOpen(true)
+          break
+        case 'openSettings':
+          setPrefsOpen(true)
+          break
+      }
+    }
+
+    async function setup () {
+      const bridge = await api.load()
+      bridge.events.on('shortcut', onShortcut)
+    }
+    setup()
+
+    return () => {
+      async function teardown () {
+        const bridge = await api.load()
+        bridge.events.off('shortcut', onShortcut)
+      }
+      teardown()
+    }
+  }, [])
+
+  /**
+   * Close the palette
+   */
+  function handlePaletteClose () {
+    setPaletteIsOpen(false)
+  }
+
+  /**
+   * Open the palette
+   */
+  function handlePaletteOpen () {
+    setPaletteIsOpen(true)
+  }
+
+  function featureShown (feature) {
+    if (!Array.isArray(features)) {
+      return true
+    }
+    return features.includes(feature)
+  }
 
   /**
    * Set the `isEditingLayout` toggle on
@@ -49,12 +99,9 @@ export function Header ({ title = 'Bridge' }) {
     })
   }
 
-  async function handleMaximize () {
-    if (!isElectron()) {
-      return
-    }
-    const bridge = await api.load()
-    bridge.commands.executeCommand('window.toggleMaximize')
+  function handleStayOnTopChange (newValue) {
+    windowUtils.setStayOnTop(newValue)
+    setStayOnTop(newValue)
   }
 
   return (
@@ -62,31 +109,85 @@ export function Header ({ title = 'Bridge' }) {
       <Modal open={prefsOpen} onClose={() => setPrefsOpen(false)}>
         <Preferences onClose={() => setPrefsOpen(false)} />
       </Modal>
-      <header className={`Header ${isMacOS() && isElectron() ? 'has-leftMargin' : ''}`} onDoubleClick={() => handleMaximize()}>
-        <div>
-          { title }
-        </div>
-        <div className='Header-center'></div>
+      <Palette open={paletteIsOpen} onClose={() => handlePaletteClose()} />
+      <header
+        className={`
+          Header
+          ${windowUtils.isMacOS() && windowUtils.isElectron() ? 'has-leftMargin' : ''}
+          ${windowUtils.isWindows() && windowUtils.isElectron() ? 'has-rightMargin' : ''}
+        `}
+        onDoubleClick={() => windowUtils.toggleMaximize()}
+      >
+        {
+          (windowUtils.isWindows() && windowUtils.isElectron())
+          ? (
+            <>
+              <div className='Header-title'>
+                <AppMenu />
+              </div>
+              <div className='Header-center'>
+                { featureShown('title') && title }
+                {
+                  featureShown('title') && shared?._hasUnsavedChanges &&
+                  <span className='Header-edited'> — edited</span>
+                }
+              </div>
+            </>
+          )
+          : (
+            <>
+              <div className='Header-title'>
+                { featureShown('title') && title }
+                {
+                  featureShown('title') && shared?._hasUnsavedChanges &&
+                  <span className='Header-edited'> — edited</span>
+                }
+              </div>
+              <div className='Header-center' />
+            </>
+          )
+        }
         <div className='Header-block'>
-          <div className='Header-actionSection'>
-            <button className={`Header-button Header-roleBtn ${role === 1 ? 'is-main' : ''}`} onClick={() => setRoleOpen(true)}>
-              {role === 1 ? 'Main' : 'Satellite'}
-            </button>
-            <Role currentRole={role} open={roleOpen} onClose={() => setRoleOpen(false)} />
-          </div>
-          <div className='Header-actionSection'>
-            <button className='Header-button Header-sharingBtn' onClick={() => setSharingOpen(true)}>
-              <Icon name='person' />
-              {connectionCount || 0}
-            </button>
-            <Sharing open={sharingOpen} onClose={() => setSharingOpen(false)} />
-          </div>
-          <button className={`Header-button Header-editBtn ${isEditingLayout ? 'is-active' : ''}`} onClick={() => handleEdit(!isEditingLayout)}>
-            <Icon name='edit' color={isEditingLayout ? 'var(--base-color--accent1)' : 'var(--base-color)'} />
-          </button>
-          <button className='Header-button Header-preferencesBtn' onClick={() => setPrefsOpen(true)}>
-            <Icon name='preferences' />
-          </button>
+          {
+            featureShown('stayOnTop') && windowUtils.isElectron() &&
+            (
+              <button className='Header-button' onClick={() => handleStayOnTopChange(!stayOnTop)} title='Toggle stay on top'>
+                <Icon name={stayOnTop ? 'stayOnTopOn' : 'stayOnTopOff'} />
+              </button>
+            )
+          }
+          {
+            featureShown('palette') &&
+            (
+              <button className='Header-button' onClick={() => handlePaletteOpen()} title='Open palette'>
+                <Icon name='search' />
+              </button>
+            )
+          }
+          {
+            featureShown('reload') &&
+            (
+              <button className='Header-button' onClick={() => handleReload()} title='Reload'>
+                <Icon name='reload' />
+              </button>
+            )
+          }
+          {
+            featureShown('editLayout') &&
+            (
+              <button className={`Header-button ${isEditingLayout ? 'is-active' : ''}`} onClick={() => handleEdit(!isEditingLayout)} title='Edit layout'>
+                <Icon name='edit' color={isEditingLayout ? 'var(--base-color--accent1)' : 'var(--base-color)'} />
+              </button>
+            )
+          }
+          {
+            featureShown('preferences') &&
+            (
+              <button className='Header-button Header-preferencesBtn' onClick={() => setPrefsOpen(true)} title='Preferences'>
+                <Icon name='preferences' />
+              </button>
+            )
+          }
         </div>
       </header>
     </>

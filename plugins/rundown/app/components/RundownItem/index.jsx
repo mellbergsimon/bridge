@@ -16,6 +16,7 @@ import './style.css'
 import { SharedContext } from '../../sharedContext'
 import { useAsyncValue } from '../../hooks/useAsyncValue'
 
+import { Icon as MainAppIcon } from '../../../../../app/components/Icon'
 import { RundownItemProgress } from '../RundownItemProgress'
 import { RundownItemTimeSection } from '../RundownItemTimeSection'
 import { RundownItemIndicatorsSection } from '../RundownItemIndicatorsSection'
@@ -77,7 +78,7 @@ async function getReadablePropertiesForType (typeName) {
   }
 }
 
-export function RundownItem ({ index, item }) {
+export function RundownItem ({ index, icon, item }) {
   const [shared] = React.useContext(SharedContext)
   const [typeProperties, setTypeProperties] = React.useState([])
 
@@ -95,6 +96,7 @@ export function RundownItem ({ index, item }) {
   }, [item?.data?.name])
 
   const displaySettings = shared?.plugins?.['bridge-plugin-rundown']?.settings?.display
+  const isCompact = shared?.plugins?.['bridge-plugin-rundown']?.settings?.compact
 
   const properties = [
     { if: displaySettings?.id, name: 'ID', value: item?.id },
@@ -118,7 +120,7 @@ export function RundownItem ({ index, item }) {
   }, [item?.type])
 
   return (
-    <div className='RundownItem'>
+    <div className={`RundownItem ${isCompact ? 'is-compact' : ''}`}>
       <div className='RundownItem-margin'>
         <Layout.Spread>
           <div className='RundownItem-section'>
@@ -127,6 +129,14 @@ export function RundownItem ({ index, item }) {
             <div className='RundownItem-index'>
               {index}
             </div>
+            {
+              icon &&
+              (
+                <div className='RundownItem-icon'>
+                  <MainAppIcon name={icon} />
+                </div>
+              )
+            }
             <div className='RundownItem-name'>
               {name}
             </div>

@@ -1,5 +1,60 @@
 # Changelog
 
+## 1.0.0-beta.9
+### Added
+- Support for named urls when sharing links to workspaces
+- Ability to convert items to other types by right-clicking
+- Ancestor items in context menus now stay tinted when their child menus are opened
+- A shortcut to open preferences (CMD/CTRL+,)
+- Support for lists in settings
+- Support for custom ids in select inputs in settings
+- Support for LTC timecode and triggers
+- A state evaluation API
+- Granular type inheritance
+- Default names to types
+- Functionality for making windows stay on top
+- Support for Caspar CGs HTML producer
+- Support for SCALE_MODE for Caspar media for Caspar 2.5.x
+- Support for Caspar CGs image scroller
+### Changed
+- Some features have moved to the footer of the app window
+- Context menus now follow the color theme
+- Windows builds now use a custom window header
+### Fixed
+- An issue where the inspector started to scroll horisontally on overflow
+- Closing electron windows may cause a loop preventing user defaults from being saved
+- An issue where settings didn't render after reload
+
+## 1.0.0-beta.8
+### Fixed
+- The space key can now be used for keyboard shortcuts
+- An issue where items in the rundown couldn't rapidly be selected and de-selected
+- An issue where context menus were cut off in the rundown
+- An issue with the palette not setting proper keys
+- An issue with the palette not removing event listeners
+- The escape key causes weird behaviour when editing a shortcut
+- Closing shortcuts with the escape key prevents context menus in the edit mode
+- An issue that crashed the app in windows when opened with an invalid file path as runtime argument
+### Added
+- Support for selecting multiple items at once with the shift key
+- An API for managing context menus
+- An API for managing the clipboard
+- Search in context menus
+- Keyboard control in context menus
+- Allow for setting default on play and on end actions
+- A modal stack for controlling the order in which modals are closed
+- A prompt to save if unsaved changes are detected
+
+## 1.0.0-beta.7
+### Changed
+- Worker errors now show as messages in the UI
+- Refactored websocket logic
+### Added
+- Buttons for reload and the palette to the header
+- Floating widgets
+- A compact option for rundown items
+- Authorization for commands
+
 ## 1.0.0-beta.6
 ### Changed
 - item.data.caspar.data replaces item.data.templateData for structured template data

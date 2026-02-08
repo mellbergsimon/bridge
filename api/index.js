@@ -18,6 +18,8 @@ require('./system')
 require('./state')
 require('./types')
 require('./items')
+require('./time')
+require('./ui')
 
 class API {
   constructor (props) {
@@ -35,6 +37,8 @@ class API {
     this.state = props.State
     this.types = props.Types
     this.items = props.Items
+    this.time = props.Time
+    this.ui = props.UI
   }
 }
 
@@ -52,7 +56,9 @@ DIController.main.register('API', API, [
   'System',
   'State',
   'Types',
-  'Items'
+  'Items',
+  'Time',
+  'UI'
 ])
 
 const main = DIController.main.instantiate('API')

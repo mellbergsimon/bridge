@@ -1,8 +1,11 @@
 import React from 'react'
 import { Start } from './views/Start'
 import { Workspace } from './views/Workspace'
+import { WorkspaceWidget } from './views/WorkspaceWidget'
 
 import { Router } from './components/Router'
+import { Transparency } from './components/Transparency'
+import { ContextMenuBoundary } from './components/ContextMenuBoundary'
 
 import { LocalContext } from './localContext'
 import { SharedContext } from './sharedContext'
@@ -10,30 +13,19 @@ import { SocketContext } from './socketContext'
 
 import { useWebsocket } from './hooks/useWebsocket'
 
+
+import * as windowUtils from './utils/window'
 import * as shortcuts from './utils/shortcuts'
 import * as browser from './utils/browser'
+import * as auth from './auth'
 import * as api from './api'
-
-/**
- * Define the interval of heartbeats
- * sent to the server to indicate that
- * the socket is alive
- *
- * This value MUST be smaller than the
- * ttl of a socket defined in the server
- *
- * Defaults to 5 seconds
- *
- * @type { Number }
- */
-const HEARTBEAT_INTERVAL_MS = 5000
 
 /**
   * The protocol (wss or ws)
   * that sockets should use
   * based on the current http
   * protocol
-  * @type { String }
+  * @type { string }
   */
 const socketProtocol = (function () {
   if (window.location.protocol === 'https:') {
@@ -77,13 +69,39 @@ root html tag for platform-specific styling e.t.c.
 */
 ;(function () {
   window.document.documentElement.dataset.platform = browser.platform()
+  window.document.documentElement.dataset.agent = browser.isElectron() ? 'electron' : 'web'
 })()
+
+;(async function () {
+  const token = await auth.getToken()
+  const bridge = await api.load()
+  bridge.commands.setHeader('authentication', token)
+  bridge.events.emitLocally('didSetAuthenticationHeader')
+})()
+
+async function updateControlsColors () {
+  /*
+  Wait for authentication
+  as the setControlColors
+  would be blocked without it
+  */
+  await auth.getToken()
+
+  const style = getComputedStyle(document.body)
+  windowUtils.setControlColors({
+    symbolColor: style.getPropertyValue('--base-color')
+  })
+}
+
+const websocketQuery = {
+  workspace
+}
 
 export default function App () {
   const [local, setLocal] = React.useState({})
   const [shared, setShared] = React.useState({})
 
-  const [data, send, readyState] = useWebsocket(`${socketHost}/api/v1/ws?workspace=${workspace}`, true)
+  const [data, send, readyState] = useWebsocket(workspace && `${socketHost}/api/v1/ws`, true, websocketQuery)
 
   /**
     * Setup a reference to hold
@@ -99,11 +117,6 @@ export default function App () {
   }, [local])
 
   React.useEffect(() => {
-    if (readyState !== 1) return
-    send({ type: 'id', data: local.id })
-  }, [readyState])
-
-  React.useEffect(() => {
     /**
      * Setup the Bridge api
      * and attach listeners
@@ -114,6 +127,12 @@ export default function App () {
       bridge.transport.send = msg => {
         send(msg)
       }
+
+      if (!bridge.client.getIdentity()) {
+        const id = await bridge.client.registerClient()
+        applyLocal({ id })
+      }
+      
       bridge.transport.replayQueue()
 
       bridge.events.on('state.change', state => {
@@ -121,7 +140,7 @@ export default function App () {
       })
 
       window.onbeforeunload = () => {
-        send({ type: 'disconnect' })
+        bridge.client.removeClient()
       }
 
       const initialState = await bridge.state.get()
@@ -130,26 +149,6 @@ export default function App () {
     if (readyState !== 1) return
     setup()
   }, [readyState])
-
-  /*
-  Setup an interval to send a heartbeat
-  at a regular interval to the server
-  to indicate that the socket is alive
-  */
-  React.useEffect(() => {
-    async function sendHeartbeat () {
-      const bridge = await api.load()
-      bridge.client.heartbeat()
-    }
-
-    const ival = setInterval(
-      () => sendHeartbeat(),
-      HEARTBEAT_INTERVAL_MS
-    )
-    sendHeartbeat()
-
-    return () => clearInterval(ival)
-  }, [local])
 
   /**
    * Apply data to the shared state,
@@ -187,37 +186,11 @@ export default function App () {
   */
   React.useEffect(() => {
     ;(async function () {
-      if (!data) return
-      const json = JSON.parse(data)
-      switch (json?.type) {
-        /*
-        Keep track of this connection's
-        unique identifier and setup the
-        client's initial state
-        */
-        case 'id':
-          applyLocal({ id: json?.data })
-          applyShared({
-            _connections: {
-              [json?.data]: {
-                isPersistent: browser.isElectron()
-              }
-            }
-          })
-          ;(await api.load()).client.setIdentity(json?.data)
-          break
-
-        /*
-        Forward the message to
-        the api for processing
-        */
-        default:
-          ;(async function () {
-            const bridge = await api.load()
-            bridge.transport.receive(json)
-          })()
-          break
+      if (!data) {
+        return
       }
+      const bridge = await api.load()
+      bridge.transport.receive(data)
     })()
   }, [data])
 
@@ -233,6 +206,14 @@ export default function App () {
   }, [local.theme])
 
   /*
+  Also notify the main thread to
+  update the window controls
+  */
+  React.useEffect(() => {
+    updateControlsColors()
+  }, [local.appliedTheme])
+
+  /*
   Load the theme from localstorage
   into the local context
   */
@@ -241,20 +222,48 @@ export default function App () {
     applyLocal({ theme })
   }, [])
 
+  /*
+  Listen to changes to localstorage to update
+  the current window if the theme changes in another window
+
+  Note that the event won't fire in the same
+  window that set the local storage item
+  */
+  React.useEffect(() => {
+    function onStorageChange (e) {
+      if (e.key === 'bridge.theme') {
+        applyLocal({
+          theme: e.newValue
+        })
+      }
+    }
+    window.addEventListener('storage', onStorageChange)
+    return () => {
+      window.removeEventListener('storage', onStorageChange)
+    }
+  }, [])
+
   return (
     <SocketContext.Provider value={[send, data]}>
       <LocalContext.Provider value={[local, applyLocal]}>
         <SharedContext.Provider value={[shared, applyShared]}>
-          <Router routes={[
-            {
-              path: /^\/workspaces\/.+$/,
-              render: () => <Workspace />
-            },
-            {
-              path: '/',
-              render: () => <Start />
-            }
-          ]}/>
+          <ContextMenuBoundary>
+            <Transparency />
+            <Router routes={[
+              {
+                path: /^\/workspaces\/.+\/widgets\/.+$/,
+                render: () => <WorkspaceWidget />
+              },
+              {
+                path: /^\/workspaces\/.+$/,
+                render: () => <Workspace />
+              },
+              {
+                path: '/',
+                render: () => <Start />
+              }
+            ]}/>
+          </ContextMenuBoundary>
         </SharedContext.Provider>
       </LocalContext.Provider>
     </SocketContext.Provider>
