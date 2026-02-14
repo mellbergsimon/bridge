@@ -3,7 +3,6 @@ import bridge from 'bridge'
 import { SharedContext } from '../sharedContext'
 import { MediaSeek } from '../components/MediaSeek'
 
-
 export const InspectorRange = () => {
   const [state] = React.useContext(SharedContext)
   const [selection, setSelection] = React.useState([])
