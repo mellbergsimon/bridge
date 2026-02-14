@@ -8,12 +8,14 @@ const uuid = require('uuid')
  * @returns {Array} - A nested folder structure represented as an array of folder objects
  */
 function buildFolderTree (paths) {
+  console.log(paths)
   if (!paths) return []
 
   const root = []
   const delimiters = /[\/\\]+/ // eslint-disable-line 
 
   for (const path of paths) {
+    console.log("Path: " + path)
     // Split the path into parts by '/' or '\' and remove any empty segments
     const parts = path.name.split(delimiters).filter(Boolean)
 
@@ -24,12 +26,12 @@ function buildFolderTree (paths) {
 
     parts.forEach((part, index) => {
       const isLast = index === parts.length - 1
-      const isFile = !isFolderPath && isLast // Only the last part can be a file
-      const pwd = parts.slice(0, index + 1).join('/') // Join parts to get the path
+      const isFile = !isFolderPath && isLast
+      const pwd = parts.slice(0, index + 1).join('/')
 
-      let existing = currentLevel.find((item) => item.name === part) // Check if folder exists on current level
+      let existing = currentLevel.find((item) => item.name === part && item.file === false)
 
-      if (!existing) { // If it does not exist then create it.
+      if (!existing) {
         if (isFile) {
           existing = {
             ...path,
@@ -37,7 +39,7 @@ function buildFolderTree (paths) {
             name: pwd,
             id: uuid.v4()
           }
-        } else { // It is a folder then save name instead of path
+        } else {
           existing = {
             file: false,
             name: part,
@@ -45,11 +47,11 @@ function buildFolderTree (paths) {
             files: []
           }
         }
-        currentLevel.push(existing) // Save folder or file to current level
+        currentLevel.push(existing) 
       }
 
       if (!isFile) {
-        currentLevel = existing.files // If the current item is a folder, go deeper
+        currentLevel = existing.files
       }
     })
   }
